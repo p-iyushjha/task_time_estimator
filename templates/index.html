@@ -1,51 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Advanced Task Time Estimator</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Master Agile Estimator with Dependencies</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .navbar-custom {
+      background-color: #343a40;
+    }
+    .navbar-custom .navbar-brand,
+    .navbar-custom .nav-link {
+      color: #ffffff;
+    }
+    .card {
+      margin-bottom: 20px;
+    }
+    .footer {
+      padding: 20px 0;
+      background-color: #343a40;
+      color: #fff;
+      text-align: center;
+      margin-top: 30px;
+    }
+  </style>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-<div class="container mt-5">
-    <h2 class="text-center">Advanced Task Time Estimator</h2>
-    <p class="text-muted">
-        Enter tasks one per line in the format: <strong>optimistic, most likely, pessimistic</strong><br>
-        For example: <em>2, 4, 10</em> (ensure optimistic &lt; most likely &lt; pessimistic)
-    </p>
-    <form method="post" action="/">
-        <div class="form-group">
-            <label for="tasks">Task Estimates:</label>
-            <textarea class="form-control" id="tasks" name="tasks" rows="5" placeholder="Enter each task on a new line..."></textarea>
-        </div>
-        <div class="form-group">
-            <label for="num_simulations">Number of Simulations (optional, default 10000):</label>
-            <input type="number" class="form-control" id="num_simulations" name="num_simulations" placeholder="10000">
-        </div>
-        <button type="submit" class="btn btn-primary">Calculate Project Duration</button>
-    </form>
-    
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-custom">
+    <a class="navbar-brand" href="#">Agile Estimator</a>
+  </nav>
+
+  <div class="container mt-4">
+    <!-- Input Card -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Enter Task Details</h4>
+      </div>
+      <div class="card-body">
+        <p class="text-muted">
+          Enter each task on a new line in the following format:
+          <strong>ID, Task Name, Optimistic, Most Likely, Pessimistic, Dependencies</strong><br>
+          <em>Dependencies</em> are optional (if multiple, separate them with semicolons).<br>
+          <strong>Example:</strong><br>
+          1, Task A, 2, 4, 8, <br>
+          2, Task B, 1, 2, 3, 1<br>
+          3, Task C, 3, 5, 10, 1;2
+        </p>
+        <form method="post" action="/">
+          <div class="form-group">
+            <label for="tasks">Task Details:</label>
+            <textarea class="form-control" id="tasks" name="tasks" rows="8" placeholder="Enter task details here..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label for="num_simulations">Simulations (default 10000):</label>
+              <input type="number" class="form-control" id="num_simulations" name="num_simulations" placeholder="10000">
+            </div>
+            <div class="form-group col-md-4">
+              <label for="velocity_factor">Velocity Factor (default 1.0):</label>
+              <input type="number" step="any" class="form-control" id="velocity_factor" name="velocity_factor" placeholder="1.0">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-success btn-block">Run Simulation</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Error Message -->
     {% if error %}
-    <div class="mt-4 alert alert-danger">
-        <p>{{ error }}</p>
+    <div class="alert alert-danger" role="alert">
+      {{ error }}
     </div>
     {% endif %}
-    
+
+    <!-- Results Card -->
     {% if results %}
-    <div class="mt-4 alert alert-info">
-        <h4>Results:</h4>
-        <p><strong>Total Number of Tasks:</strong> {{ results.num_tasks }}</p>
-        <p><strong>Predicted Mean Project Duration:</strong> {{ results.mean_duration|round(2) }} hours</p>
-        <p><strong>Predicted Median Project Duration:</strong> {{ results.median_duration|round(2) }} hours</p>
-        <p><strong>Standard Deviation:</strong> {{ results.std_duration|round(2) }} hours</p>
-        <p><strong>95% Confidence Interval:</strong> {{ results.ci_lower|round(2) }} - {{ results.ci_upper|round(2) }} hours</p>
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white">
+        <h4 class="mb-0">Simulation Results</h4>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Total Tasks:</strong> {{ results.num_tasks }}</p>
+            <p><strong>Mean Duration:</strong> {{ results.mean_duration|round(2) }} hours</p>
+            <p><strong>Median Duration:</strong> {{ results.median_duration|round(2) }} hours</p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Standard Deviation:</strong> {{ results.std_duration|round(2) }} hours</p>
+            <p><strong>95% CI:</strong> {{ results.ci_lower|round(2) }} - {{ results.ci_upper|round(2) }} hours</p>
+          </div>
+        </div>
+        <!-- Plotly Chart -->
+        <div id="plot" class="mt-4"></div>
+        <script>
+          var plotData = {{ plot_json|safe }};
+          Plotly.newPlot('plot', plotData.data, plotData.layout);
+        </script>
+      </div>
     </div>
-    
-    <div id="plot" class="mt-4"></div>
-    <script>
-        var plotData = {{ plot_json|safe }};
-        Plotly.newPlot('plot', plotData.data, plotData.layout);
-    </script>
     {% endif %}
-</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>&copy; {{ now().year }} Agile Estimator. All rights reserved.</p>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
