@@ -1,38 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Task Time Estimator - Lognormal Model</title>
+    <title>Advanced Task Time Estimator</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 <div class="container mt-5">
-    <h2 class="text-center">Task Time Estimator - Lognormal Model</h2>
+    <h2 class="text-center">Advanced Task Time Estimator</h2>
+    <p class="text-muted">
+        Enter tasks one per line in the format: <strong>optimistic, most likely, pessimistic</strong><br>
+        For example: <em>2, 4, 10</em> (ensure optimistic &lt; most likely &lt; pessimistic)
+    </p>
     <form method="post" action="/">
         <div class="form-group">
-            <label for="median_time">Estimated Time (Median, in hours):</label>
-            <input type="number" step="any" class="form-control" id="median_time" name="median_time" placeholder="Enter estimated median time" required>
+            <label for="tasks">Task Estimates:</label>
+            <textarea class="form-control" id="tasks" name="tasks" rows="5" placeholder="Enter each task on a new line..."></textarea>
         </div>
         <div class="form-group">
-            <label for="sigma">Uncertainty (σ, e.g., 0.5):</label>
-            <input type="number" step="any" class="form-control" id="sigma" name="sigma" placeholder="Enter sigma (e.g., 0.5)" required>
+            <label for="num_simulations">Number of Simulations (optional, default 10000):</label>
+            <input type="number" class="form-control" id="num_simulations" name="num_simulations" placeholder="10000">
         </div>
-        <button type="submit" class="btn btn-primary">Calculate</button>
+        <button type="submit" class="btn btn-primary">Calculate Project Duration</button>
     </form>
     
-    {% if result.mean_time %}
+    {% if error %}
+    <div class="mt-4 alert alert-danger">
+        <p>{{ error }}</p>
+    </div>
+    {% endif %}
+    
+    {% if results %}
     <div class="mt-4 alert alert-info">
         <h4>Results:</h4>
-        <p><strong>Predicted Mean Time:</strong> {{ result.mean_time|round(2) }} hours</p>
-        <p><strong>Standard Deviation:</strong> {{ result.std_dev|round(2) }} hours</p>
-        <p>
-            <strong>95% Confidence Interval:</strong>
-            {{ result.lower_bound|round(2) }} to {{ result.upper_bound|round(2) }} hours
-        </p>
+        <p><strong>Total Number of Tasks:</strong> {{ results.num_tasks }}</p>
+        <p><strong>Predicted Mean Project Duration:</strong> {{ results.mean_duration|round(2) }} hours</p>
+        <p><strong>Predicted Median Project Duration:</strong> {{ results.median_duration|round(2) }} hours</p>
+        <p><strong>Standard Deviation:</strong> {{ results.std_duration|round(2) }} hours</p>
+        <p><strong>95% Confidence Interval:</strong> {{ results.ci_lower|round(2) }} - {{ results.ci_upper|round(2) }} hours</p>
     </div>
-    {% elif result.error %}
-    <div class="mt-4 alert alert-danger">
-        <p>{{ result.error }}</p>
-    </div>
+    
+    <div id="plot" class="mt-4"></div>
+    <script>
+        var plotData = {{ plot_json|safe }};
+        Plotly.newPlot('plot', plotData.data, plotData.layout);
+    </script>
     {% endif %}
 </div>
 </body>
