@@ -1,28 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Task Time Estimator - Lognormal Model</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <title>Task Time Estimates Calculator</title>
 </head>
 <body>
-    <div class="container mt-5">
-        <h2 class="text-center">Task Time Estimates Calculator</h2>
-        <form method="post" action="/">
-            <div class="form-group">
-                <label for="task_estimates">Enter Task Estimates (comma-separated):</label>
-                <input type="text" class="form-control" name="task_estimates[]" placeholder="E.g., 5, 10, 15" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">Calculate</button>
-        </form>
-        
-        {% if mean is not none %}
-        <div class="mt-4 alert alert-info">
-            <h5>Results:</h5>
-            <p><strong>Mean Estimate:</strong> {{ mean }} hours</p>
-            <p><strong>Standard Deviation:</strong> {{ std_dev }} hours</p>
-            <p><strong>95% Confidence Interval:</strong> {{ ci_low }} to {{ ci_high }} hours</p>
+<div class="container mt-5">
+    <h2 class="text-center">Task Time Estimator - Lognormal Model</h2>
+    <form method="post" action="/">
+        <div class="form-group">
+            <label for="median_time">Estimated Time (Median, in hours):</label>
+            <input type="number" step="any" class="form-control" id="median_time" name="median_time" placeholder="Enter estimated median time" required>
         </div>
-        {% endif %}
+        <div class="form-group">
+            <label for="sigma">Uncertainty (σ, e.g., 0.5):</label>
+            <input type="number" step="any" class="form-control" id="sigma" name="sigma" placeholder="Enter sigma (e.g., 0.5)" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Calculate</button>
+    </form>
+    
+    {% if result.mean_time %}
+    <div class="mt-4 alert alert-info">
+        <h4>Results:</h4>
+        <p><strong>Predicted Mean Time:</strong> {{ result.mean_time|round(2) }} hours</p>
+        <p><strong>Standard Deviation:</strong> {{ result.std_dev|round(2) }} hours</p>
+        <p>
+            <strong>95% Confidence Interval:</strong>
+            {{ result.lower_bound|round(2) }} to {{ result.upper_bound|round(2) }} hours
+        </p>
     </div>
+    {% elif result.error %}
+    <div class="mt-4 alert alert-danger">
+        <p>{{ result.error }}</p>
+    </div>
+    {% endif %}
+</div>
 </body>
 </html>
