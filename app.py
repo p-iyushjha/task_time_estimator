@@ -2,10 +2,15 @@ from flask import Flask, render_template, request
 import numpy as np
 import json
 from datetime import datetime
+import logging
 
 app = Flask(__name__)
+app.debug = True
 
-# Inject the current time into templates for the footer
+# Set up logging to help diagnose errors
+logging.basicConfig(level=logging.DEBUG)
+
+# Inject the current time into templates (for the footer)
 @app.context_processor
 def inject_now():
     return {'now': datetime.utcnow}
@@ -15,7 +20,7 @@ def parse_tasks(task_input):
     Parse each line of the textarea input.
     Expected format per line:
     ID, Task Name, Optimistic, Most Likely, Pessimistic, Dependencies (optional; use semicolons if multiple)
-    
+
     Example lines:
       1, Task A, 2, 4, 8, 
       2, Task B, 1, 2, 3, 1
@@ -26,20 +31,17 @@ def parse_tasks(task_input):
     for line in lines:
         parts = line.split(',')
         if len(parts) < 5:
-            continue  # invalid line, skip it
+            continue  # Skip invalid lines
         try:
             task_id = parts[0].strip()
             name = parts[1].strip()
             optimistic = float(parts[2].strip())
             most_likely = float(parts[3].strip())
             pessimistic = float(parts[4].strip())
-            # Dependencies (optional)
+            # Handle dependencies (optional)
             if len(parts) >= 6:
                 dep_str = parts[5].strip()
-                if dep_str:
-                    dependencies = [d.strip() for d in dep_str.split(';') if d.strip()]
-                else:
-                    dependencies = []
+                dependencies = [d.strip() for d in dep_str.split(';') if d.strip()] if dep_str else []
             else:
                 dependencies = []
             tasks.append({
@@ -50,7 +52,8 @@ def parse_tasks(task_input):
                 'pessimistic': pessimistic,
                 'dependencies': dependencies
             })
-        except Exception:
+        except Exception as e:
+            app.logger.error(f"Error parsing line: {line}. Error: {e}")
             continue
     return tasks
 
@@ -68,7 +71,7 @@ def topological_sort(tasks):
         graph[task['id']] = []
     for task in tasks:
         for dep in task['dependencies']:
-            if dep in graph:  # only consider dependencies that exist
+            if dep in graph:  # Only consider dependencies that exist
                 graph[dep].append(task['id'])
                 indegree[task['id']] += 1
     queue = [tid for tid in indegree if indegree[tid] == 0]
@@ -113,6 +116,7 @@ def index():
             velocity_factor = float(velocity_factor) if velocity_factor else 1.0
         except ValueError:
             velocity_factor = 1.0
+
         if tasks_input:
             tasks = parse_tasks(tasks_input)
             if not tasks:
@@ -125,26 +129,30 @@ def index():
                     error = str(e)
                     return render_template("index.html", error=error)
                 
-                # Monte Carlo simulation for project duration
                 simulation_results = np.zeros(num_simulations)
-                for i in range(num_simulations):
-                    finish_times = {}
-                    # Process tasks in topological order so dependencies are respected.
-                    for task in sorted_tasks:
-                        duration_sample = sample_beta_pert(
-                            task['optimistic'], task['most_likely'], task['pessimistic'], size=1
-                        )[0]
-                        # Adjust duration based on agile velocity factor
-                        duration_sample *= velocity_factor
-                        # Start time is the maximum finish time among dependencies, if any.
-                        if task['dependencies']:
-                            start_time = max([finish_times.get(dep, 0) for dep in task['dependencies']])
-                        else:
-                            start_time = 0
-                        finish_times[task['id']] = start_time + duration_sample
-                    project_duration = max(finish_times.values())
-                    simulation_results[i] = project_duration
-                
+                try:
+                    for i in range(num_simulations):
+                        finish_times = {}
+                        # Process tasks in topological order so that dependencies are respected.
+                        for task in sorted_tasks:
+                            duration_sample = sample_beta_pert(
+                                task['optimistic'], task['most_likely'], task['pessimistic'], size=1
+                            )[0]
+                            # Apply velocity adjustment factor (e.g., if >1, tasks take longer)
+                            duration_sample *= velocity_factor
+                            # Determine start time from dependencies (if any)
+                            if task['dependencies']:
+                                start_time = max([finish_times.get(dep, 0) for dep in task['dependencies']])
+                            else:
+                                start_time = 0
+                            finish_times[task['id']] = start_time + duration_sample
+                        project_duration = max(finish_times.values())
+                        simulation_results[i] = project_duration
+                except Exception as e:
+                    app.logger.error(f"Error during simulation: {e}")
+                    error = f"Error during simulation: {e}"
+                    return render_template("index.html", error=error)
+
                 mean_duration = np.mean(simulation_results)
                 median_duration = np.median(simulation_results)
                 std_duration = np.std(simulation_results)
@@ -158,7 +166,6 @@ def index():
                     "ci_lower": ci_lower,
                     "ci_upper": ci_upper
                 }
-                # Prepare Plotly histogram data for visualization
                 plot_data = {
                     "data": [{
                         "x": simulation_results.tolist(),
