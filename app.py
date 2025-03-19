@@ -7,7 +7,7 @@ import logging
 app = Flask(__name__)
 app.debug = True
 
-# Set up logging to help diagnose errors
+# Set up logging for error debugging
 logging.basicConfig(level=logging.DEBUG)
 
 # Inject the current time into templates (for the footer)
@@ -99,6 +99,14 @@ def sample_beta_pert(O, M, P, size=1):
     samples = np.random.beta(alpha, beta_param, size=size)
     return O + (P - O) * samples
 
+def calculate_sprint_points(mean_duration):
+    """
+    Calculate sprint points based on mean duration.
+    Assumes 1 sprint point is equal to 3 hours.
+    """
+    sprint_point_value = 3  # 1 sprint point = 3 hours
+    return round(mean_duration / sprint_point_value)
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     results = None
@@ -154,6 +162,7 @@ def index():
                     return render_template("index.html", error=error)
 
                 mean_duration = np.mean(simulation_results)
+                sprint_points = calculate_sprint_points(mean_duration)
                 median_duration = np.median(simulation_results)
                 std_duration = np.std(simulation_results)
                 ci_lower = np.percentile(simulation_results, 2.5)
@@ -161,6 +170,7 @@ def index():
                 results = {
                     "num_tasks": len(tasks),
                     "mean_duration": mean_duration,
+                    "sprint_points": sprint_points,
                     "median_duration": median_duration,
                     "std_duration": std_duration,
                     "ci_lower": ci_lower,
