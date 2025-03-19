@@ -47,7 +47,7 @@
           <strong>ID, Task Name, Optimistic, Most Likely, Pessimistic, Dependencies</strong><br>
           <em>Dependencies</em> are optional (if multiple, separate them with semicolons).<br>
           <strong>Example:</strong><br>
-          1, Task A, 2, 4, 8, <br>
+          1, Task A, 2, 4, 8,<br>
           2, Task B, 1, 2, 3, 1<br>
           3, Task C, 3, 5, 10, 1;2
         </p>
@@ -90,11 +90,11 @@
             <p><strong>Total Tasks:</strong> {{ results.num_tasks }}</p>
             <p><strong>Mean Duration:</strong> {{ results.mean_duration|round(2) }} hours</p>
             <p><strong>Sprint Points:</strong> {{ results.sprint_points }}</p>
-            <p><strong>Median Duration:</strong> {{ results.median_duration|round(2) }} hours</p>
           </div>
           <div class="col-md-6">
+            <p><strong>Median Duration:</strong> {{ results.median_duration|round(2) }} hours</p>
             <p><strong>Standard Deviation:</strong> {{ results.std_duration|round(2) }} hours</p>
-            <p><strong>95% CI:</strong> {{ results.ci_lower|round(2) }} - {{ results.ci_upper|round(2) }} hours</p>
+            <p><strong>95% Confidence Interval:</strong> {{ results.ci_lower|round(2) }} - {{ results.ci_upper|round(2) }} hours</p>
           </div>
         </div>
         <!-- Plotly Chart -->
@@ -110,7 +110,7 @@
 
   <!-- Footer -->
   <div class="footer">
-    <p>&copy; {{ now().year }} Agile Estimator. All rights reserved.</p>
+    <p>&copy; {{ now().year }} Agile Estimator - Created by Fixed Wing Software Team.</p>
   </div>
 
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
